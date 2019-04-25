@@ -130,7 +130,9 @@ int run_control_loop(){
   wiringPiISR(PIN_X_QUAD_R, INT_EDGE_BOTH, encoder_x_isr);
 
   softPwmCreate(PIN_X_PWM, 0, 100);
-
+  digitalWrite(PIN_X_H1, HIGH);
+  digitalWrite(PIN_X_H2, LOW);
+  
   softPwmWrite(PIN_X_PWM, 10);
   while(1){
     usleep(1000);
