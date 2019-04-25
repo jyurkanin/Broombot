@@ -114,7 +114,7 @@ void encoder_x_isr(){
 
 int run_control_loop(){
   //got to initialize the control loop thread and the wiringpi library
-  wiringPiSetupGPIO();
+  wiringPiSetupGpio();
   pinMode(PIN_X_QUAD_L, INPUT);
   pinMode(PIN_X_QUAD_R, INPUT);
   pullUpDnControl(PIN_X_QUAD_L, PUD_DOWN);
@@ -123,8 +123,8 @@ int run_control_loop(){
   pinMode(PIN_X_H2, OUTPUT);
   
   
-  pinMode(PIN_Y_QUAD_L, INPUT);
-  pinMode(PIN_Y_QUAD_R, INPUT);
+//  pinMode(PIN_Y_QUAD_L, INPUT);
+//  pinMode(PIN_Y_QUAD_R, INPUT);
 
   wiringPiISR(PIN_X_QUAD_L, INT_EDGE_BOTH, encoder_x_isr);
   wiringPiISR(PIN_X_QUAD_R, INT_EDGE_BOTH, encoder_x_isr);
@@ -133,10 +133,10 @@ int run_control_loop(){
   digitalWrite(PIN_X_H1, HIGH);
   digitalWrite(PIN_X_H2, LOW);
   
-  softPwmWrite(PIN_X_PWM, 10);
+  softPwmWrite(PIN_X_PWM, 25);
   while(1){
-    usleep(1000);
-    printf("Encoder count %d", x_counter);
+    usleep(100000);
+    printf("Encoder count %d\n", x_counter);
   }
   
   //pthread_t motor_thread;

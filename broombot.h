@@ -1,11 +1,15 @@
-#include <wiringPi>
+#include <wiringPi.h>
+#include <softPwm.h>
 #include <pthread.h>
 #include <sys/socket.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <unistd.h>
+#include <netinet/ip.h>
 #include <math.h>
 #include <inttypes.h>
+#include <string.h>
 
 #define CMD_LEN 9
 #define SET_POS_THRESHOLD .1 //radians
