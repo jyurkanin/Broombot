@@ -11,8 +11,8 @@
 float x_set_point; //x motor set point angle
 float y_set_point; //x motor set point angle
 
-int x_counter; //counts encoder pulses for each motor
-int y_counter;
+int x_counter = 0; //counts encoder pulses for each motor
+int y_counter = 0;
 
 volatile int is_calibrated = 0;
 
@@ -98,7 +98,7 @@ int8_t lookup_table[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
 uint8_t x_state = 0; //4 bits that encode the present and last values of the two encoder wires
 uint8_t y_state = 0;
 void encoder_x_isr(){
-  x_state << 2;
+  x_state = x_state << 2;
   if(digitalRead(PIN_X_QUAD_L))
     x_state |= 0b0001; //set high
   else
@@ -133,7 +133,7 @@ int run_control_loop(){
   digitalWrite(PIN_X_H1, HIGH);
   digitalWrite(PIN_X_H2, LOW);
   
-  softPwmWrite(PIN_X_PWM, 25);
+  softPwmWrite(PIN_X_PWM, 10);
   while(1){
     usleep(100000);
     printf("Encoder count %d\n", x_counter);
