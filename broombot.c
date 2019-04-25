@@ -94,18 +94,51 @@ int run_server(){
   }
 }
 
+int8_t lookup_table[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
+uint8_t x_state = 0; //4 bits that encode the present and last values of the two encoder wires
+uint8_t y_state = 0;
+void encoder_x_isr(){
+  x_state << 2;
+  if(digitalRead(PIN_X_QUAD_L))
+    x_state |= 0b0001; //set high
+  else
+    x_state &= 0b1110;
+
+  if(digitalRead(PIN_X_QUAD_R))
+    x_state |= 0b0010; //set high
+  else
+    x_state &= 0b1101; //set low
+    
+  x_counter += lookup_table[x_state & 0b1111];
+}
+
 int run_control_loop(){
   //got to initialize the control loop thread and the wiringpi library
   wiringPiSetupGPIO();
   pinMode(PIN_X_QUAD_L, INPUT);
   pinMode(PIN_X_QUAD_R, INPUT);
-
+  pullUpDnControl(PIN_X_QUAD_L, PUD_DOWN);
+  pullUpDnControl(PIN_X_QUAD_R, PUD_DOWN);
+  pinMode(PIN_X_H1, OUTPUT);
+  pinMode(PIN_X_H2, OUTPUT);
+  
+  
   pinMode(PIN_Y_QUAD_L, INPUT);
   pinMode(PIN_Y_QUAD_R, INPUT);
 
+  wiringPiISR(PIN_X_QUAD_L, INT_EDGE_BOTH, encoder_x_isr);
+  wiringPiISR(PIN_X_QUAD_R, INT_EDGE_BOTH, encoder_x_isr);
 
-  pthread_t motor_thread;
-  pthread_create(&motor_thread, NULL, &control_loop, NULL);
+  softPwmCreate(PIN_X_PWM, 0, 100);
+
+  softPwmWrite(PIN_X_PWM, 10);
+  while(1){
+    usleep(1000);
+    printf("Encoder count %d", x_counter);
+  }
+  
+  //pthread_t motor_thread;
+  //pthread_create(&motor_thread, NULL, &control_loop, NULL);
   
 }
 
@@ -115,5 +148,5 @@ int main(int argc, char *argv[]){
   printf("Sizeof int %u\nsizeof float %u\n", sizeof(int), sizeof(float));
   
   run_control_loop();
-  run_server();
+  //run_server();
 }

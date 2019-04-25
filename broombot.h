@@ -5,14 +5,17 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+#include <inttypes.h>
 
 #define CMD_LEN 9
 #define SET_POS_THRESHOLD .1 //radians
 #define GAIN .1
 
-#define PIN_X_PWM
-#define PIN_X_QUAD_L
-#define PIN_X_QUAD_R
+#define PIN_X_PWM 14
+#define PIN_X_H1 15
+#define PIN_X_H2 18
+#define PIN_X_QUAD_L 23
+#define PIN_X_QUAD_R 24
 
 #define PIN_Y_PWM
 #define PIN_Y_QUAD_L
