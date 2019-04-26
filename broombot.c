@@ -51,15 +51,22 @@ void* control_loop(void* ignoreme){
   }
   
   float err_x;
-  float err_y;
+  //  float err_y;
 
   while(1){
+    err_x = x_set_point - count_to_radians(x_counter);
     if(err_x > SET_POS_THRESHOLD){
-      
+      digitalWrite(PIN_X_H1, HIGH);
+      digitalWrite(PIN_X_H2, LOW);
+      softPwmWrite(PIN_X_PWM, 30);
     }
-    if(err_y > SET_POS_THRESHOLD){
-      
+    else if(err_x < -SET_POS_THRESHOLD){
+      digitalWrite(PIN_X_H2, HIGH);
+      digitalWrite(PIN_X_H1, LOW);
+      softPwmWrite(PIN_X_PWM, 30);
     }
+    //    if(err_y > SET_POS_THRESHOLD){
+    //}
   }
 }
 
@@ -112,24 +119,7 @@ void encoder_x_isr(){
   x_counter += lookup_table[x_state & 0b1111];
 }
 
-int run_control_loop(){
-  //got to initialize the control loop thread and the wiringpi library
-  wiringPiSetupGpio();
-  pinMode(PIN_X_QUAD_L, INPUT);
-  pinMode(PIN_X_QUAD_R, INPUT);
-  pullUpDnControl(PIN_X_QUAD_L, PUD_DOWN);
-  pullUpDnControl(PIN_X_QUAD_R, PUD_DOWN);
-  pinMode(PIN_X_H1, OUTPUT);
-  pinMode(PIN_X_H2, OUTPUT);
-  
-  
-//  pinMode(PIN_Y_QUAD_L, INPUT);
-//  pinMode(PIN_Y_QUAD_R, INPUT);
-
-  wiringPiISR(PIN_X_QUAD_L, INT_EDGE_BOTH, encoder_x_isr);
-  wiringPiISR(PIN_X_QUAD_R, INT_EDGE_BOTH, encoder_x_isr);
-
-  softPwmCreate(PIN_X_PWM, 0, 100);
+void test(){
   digitalWrite(PIN_X_H1, HIGH);
   digitalWrite(PIN_X_H2, LOW);
   
@@ -138,10 +128,43 @@ int run_control_loop(){
     usleep(100000);
     printf("Encoder count %d\n", x_counter);
   }
+}
+
+int run_control_loop(){
+  //got to initialize the control loop thread and the wiringpi library
+  wiringPiSetupGpio();
+
+  pinMode(PIN_X_QUAD_L, INPUT);
+  pinMode(PIN_X_QUAD_R, INPUT);
+  pullUpDnControl(PIN_X_QUAD_L, PUD_DOWN);
+  pullUpDnControl(PIN_X_QUAD_R, PUD_DOWN);
+  pinMode(PIN_X_H1, OUTPUT);
+  pinMode(PIN_X_H2, OUTPUT);
+
+  /*  pinMode(PIN_Y_QUAD_L, INPUT);
+  pinMode(PIN_Y_QUAD_R, INPUT);
+  pullUpDnControl(PIN_Y_QUAD_L, PUD_DOWN);
+  pullUpDnControl(PIN_Y_QUAD_R, PUD_DOWN);
+  pinMode(PIN_Y_H1, OUTPUT);
+  pinMode(PIN_Y_H2, OUTPUT);*/
   
-  //pthread_t motor_thread;
-  //pthread_create(&motor_thread, NULL, &control_loop, NULL);
   
+  wiringPiISR(PIN_X_QUAD_L, INT_EDGE_BOTH, encoder_x_isr);
+  wiringPiISR(PIN_X_QUAD_R, INT_EDGE_BOTH, encoder_x_isr);
+  //wiringPiISR(PIN_Y_QUAD_L, INT_EDGE_BOTH, encoder_y_isr);
+  //wiringPiISR(PIN_Y_QUAD_R, INT_EDGE_BOTH, encoder_y_isr);
+
+  softPwmCreate(PIN_X_PWM, 0, 100);
+
+  x_set_point = PI; //try to make it do a full rotation
+  is_calibrated = 1;
+  pthread_t motor_thread;
+  pthread_create(&motor_thread, NULL, &control_loop, NULL);
+
+  while(1){
+    usleep(100000);
+    printf("Encoder count %d\n", x_counter);
+  }
 }
 
 int main(int argc, char *argv[]){
