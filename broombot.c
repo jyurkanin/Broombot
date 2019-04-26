@@ -17,7 +17,11 @@ int y_counter = 0;
 volatile int is_calibrated = 0;
 
 float count_to_radians(int count){
-  return count / (226*12.0);
+  return 2*M_PI*count / (10000);
+}
+
+float gain(float error){ //gain proportional to the error. Output must be bounded, from 0-100. Input is from 0-2pi
+  return 70;
 }
 
 int parseCommand(char *buf, int size){
@@ -56,17 +60,18 @@ void* control_loop(void* ignoreme){
   while(1){
     err_x = x_set_point - count_to_radians(x_counter);
     if(err_x > SET_POS_THRESHOLD){
-      digitalWrite(PIN_X_H1, HIGH);
-      digitalWrite(PIN_X_H2, LOW);
-      softPwmWrite(PIN_X_PWM, 30);
+      digitalWrite(PIN_X_H1, LOW);
+      digitalWrite(PIN_X_H2, HIGH);
+      softPwmWrite(PIN_X_PWM, gain(err_x));
     }
     else if(err_x < -SET_POS_THRESHOLD){
-      digitalWrite(PIN_X_H2, HIGH);
-      digitalWrite(PIN_X_H1, LOW);
-      softPwmWrite(PIN_X_PWM, 30);
+      digitalWrite(PIN_X_H1, HIGH);
+      digitalWrite(PIN_X_H2, LOW);
+      softPwmWrite(PIN_X_PWM, gain(err_x));
     }
-    //    if(err_y > SET_POS_THRESHOLD){
-    //}
+    else{
+      softPwmWrite(PIN_X_PWM, 0);
+    }
   }
 }
 
@@ -156,21 +161,21 @@ int run_control_loop(){
 
   softPwmCreate(PIN_X_PWM, 0, 100);
 
-  x_set_point = PI; //try to make it do a full rotation
+  x_set_point = count_to_radians(10000); //try to make it do a half rotation
   is_calibrated = 1;
   pthread_t motor_thread;
   pthread_create(&motor_thread, NULL, &control_loop, NULL);
 
   while(1){
     usleep(100000);
-    printf("Encoder count %d\n", x_counter);
+    float err_x = x_set_point - count_to_radians(x_counter);
+    printf("err_x %f counts %d\n", err_x, x_counter);
   }
 }
 
 int main(int argc, char *argv[]){
   //pthread_t socket_thread;
   //pthread_create(&socket_thread, NULL, &socket_handler, NULL);
-  printf("Sizeof int %u\nsizeof float %u\n", sizeof(int), sizeof(float));
   
   run_control_loop();
   //run_server();
