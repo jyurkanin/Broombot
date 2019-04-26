@@ -17,7 +17,7 @@ int y_counter = 0;
 volatile int is_calibrated = 0;
 
 float count_to_radians(int count){
-  //TODO: Figure this one out
+  return count / (226*12.0);
 }
 
 int parseCommand(char *buf, int size){
