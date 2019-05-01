@@ -24,11 +24,11 @@
 #define PIN_X_QUAD_L 23
 #define PIN_X_QUAD_R 24
 
-#define PIN_Y_PWM 
-#define PIN_Y_H1 
-#define PIN_Y_H2 
-#define PIN_Y_QUAD_L 
-#define PIN_Y_QUAD_R 
+#define PIN_Y_PWM 2
+#define PIN_Y_H1 3
+#define PIN_Y_H2 4
+#define PIN_Y_QUAD_L 17
+#define PIN_Y_QUAD_R 27
 
 #define X_MIN -PI //TODO: These are guesses, figure out the actual values.
 #define X_MAX PI  //
