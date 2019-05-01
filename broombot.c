@@ -28,22 +28,34 @@ int parse_command(char *buf, int size){
   if(size != CMD_LEN) return EXIT_FAILURE;
   float temp_x;
   float temp_y;
-  
-  
+  float dx;
+  float dy;
+
+
+  printf("parse command: %d\n", buf[0]);
   switch(buf[0]){ //type of command
   case MOVE_ABS_CMD:
     memcpy(&x_set_point, buf+1, 4);
     memcpy(&y_set_point, buf+5, 4);
+    printf("Got ABS CMD\n");
     break;
   case MOVE_REL_CMD:
     memcpy(&temp_x, buf+1, 4);
     memcpy(&temp_y, buf+5, 4);
     x_set_point += temp_x;
     y_set_point += temp_y;
+    printf("Got REL CMD\n");
     break;
   case CALIBRATE_CMD:
-    memcpy(buf+1, &x_counter, 4);
-    memcpy(buf+5, &y_counter, 4);
+    memcpy(buf+1, &temp_x, 4);
+    memcpy(buf+5, &temp_y, 4);
+    dx = temp_x - count_to_radians(x_counter);
+    dy = temp_y - count_to_radians(y_counter);
+    x_counter = temp_x*10000 / (2*M_PI);
+    y_counter = temp_y*10000 / (2*M_PI);
+    x_set_point += dx;
+    y_set_point += dy;
+    printf("Got calibrate CMD\n");
     break;
   }
 
@@ -53,6 +65,9 @@ int parse_command(char *buf, int size){
   if(y_set_point > Y_MAX) y_set_point = Y_MAX;
   else if(y_set_point < Y_MIN) y_set_point = Y_MIN;
   
+  printf("set points: %f %f\n", x_set_point, y_set_point);
+  printf("current points: %f %f\n", count_to_radians(x_counter), count_to_radians(y_counter));
+
   return EXIT_SUCCESS;
 }
 
@@ -69,7 +84,7 @@ void* control_loop(void* ignoreme){ //I think this looks good
   int curr_dir_y = 0; //at least thats what it said on a website.
   
   while(1){
-    FILE *file = open(RECORDED_STATE_FILE, "w");
+    FILE *file = fopen(RECORDED_STATE_FILE, "w");
     fprintf(file, "%d\n%d", x_counter, y_counter);
     fclose(file); //jank. opening and closing a file really fast sounds like a bad idea.
     
@@ -160,6 +175,7 @@ int run_server(){
   while(1){
     listen(sockfd, 3);
     new_socket = accept(sockfd, (struct sockaddr*) &address, (socklen_t*)&addrlen);
+    printf("Got new connection\n");
     //got connection, now wait for a command to be received
     while(valread = read(new_socket, buf, CMD_LEN)){
       if(parse_command(buf, valread)){
@@ -217,8 +233,11 @@ void test(){
 
 void get_recorded_state(){
   FILE* file = fopen(RECORDED_STATE_FILE, "r");
-  fscanf(file, "%d %d", x_counter, y_counter);
+  fscanf(file, "%d %d", &x_counter, &y_counter);
   fclose(file);
+  x_set_point = count_to_radians(x_counter);
+  y_set_point = count_to_radians(y_counter);
+  is_calibrated = 1;
 }
 
 int run_control_loop(){
@@ -248,8 +267,16 @@ int run_control_loop(){
 
   softPwmCreate(PIN_X_PWM, 0, 100);
   softPwmCreate(PIN_Y_PWM, 0, 100);
+  
 
-  x_set_point = count_to_radians(10000); //try to make it do a half rotation
+  softPwmWrite(PIN_Y_PWM, 0);
+  digitalWrite(PIN_Y_H1, LOW);
+  digitalWrite(PIN_Y_H2, LOW);
+
+  softPwmWrite(PIN_X_PWM, 0);
+  digitalWrite(PIN_X_H1, LOW);
+  digitalWrite(PIN_X_H2, LOW);
+
   //is_calibrated = 1;
   
   get_recorded_state();

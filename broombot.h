@@ -15,8 +15,8 @@
 #define SERVER_PORT 8080
 
 #define CMD_LEN 9
-#define SET_POS_THRESHOLD .1 //radians
-#define GAIN .1
+#define SET_POS_THRESHOLD .01 //radians
+#define GAIN .1 //ignored
 
 #define PIN_X_PWM 14
 #define PIN_X_H1 15
@@ -25,15 +25,15 @@
 #define PIN_X_QUAD_R 24
 
 #define PIN_Y_PWM 2
-#define PIN_Y_H1 3
-#define PIN_Y_H2 4
+#define PIN_Y_H1 4
+#define PIN_Y_H2 3
 #define PIN_Y_QUAD_L 17
 #define PIN_Y_QUAD_R 27
 
-#define X_MIN -PI //TODO: These are guesses, figure out the actual values.
-#define X_MAX PI  //
-#define Y_MIN -PI
-#define Y_MAX PI
+#define X_MIN -M_PI //TODO: These are guesses, figure out the actual values.
+#define X_MAX M_PI  //
+#define Y_MIN -M_PI
+#define Y_MAX M_PI
 
 //CMD type
 #define MOVE_REL_CMD 1 //next two bytes are added to the current angular set point

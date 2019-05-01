@@ -1,3 +1,3 @@
 all:
-	g++ broombot.c -o broombot -lwiringPi -lpthread
-	g++ client.c -o client
+	gcc broombot.c -o broombot -g -lwiringPi -lpthread
+	gcc client.c -o client -g

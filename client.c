@@ -2,11 +2,19 @@
 
 
 int main(int argc, char *argv[]){
-  if(argc < 4){
-    printf("Usage: ./client <ip address of broombot> <command_num> <integer> <integer>\n");
+  if(argc < 5){
+    printf("Usage: ./client <ip address of broombot> <command_num> <float> <float>\n");
     //see client.h for commands
     return -1;
   }
+  
+  char buf[9];
+  buf[0] = atoi(argv[2]);
+  float x = atof(argv[3]);
+  float y = atof(argv[4]);
+  memcpy(buf+1, &x, sizeof(x)); //sizeof int is 4.
+  memcpy(buf+5, &y, sizeof(y));
+  printf("%d %f %f\n", buf[0], x, y);
   
   int sockfd = 0;
   struct sockaddr_in address;
@@ -32,22 +40,5 @@ int main(int argc, char *argv[]){
     return -1;
   }
 
-  char buf[9];
-  switch(argv[1]){
-  case "1":
-    buf[0] = MOVE_REL_CMD;
-    break;
-  case "2":
-    buf[0] = MOVE_ABS_CMD;
-    break;
-  case "3":
-    buf[0] = CALIBRATE_CMD;
-    break;
-  }
-  
-  int x = atoi(argv[2]);
-  int y = atoi(argv[3]);
-  memcpy(buf+1, x, sizeof(x)); //sizeof int is 4.
-  memcpy(buf+5, x, sizeof(y));
   send(sockfd, buf, 9, 0);
 }
