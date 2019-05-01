@@ -24,7 +24,7 @@ float gain(float error){ //gain proportional to the error. Output must be bounde
   return 70;
 }
 
-int parseCommand(char *buf, int size){
+int parse_command(char *buf, int size){
   if(size != CMD_LEN) return EXIT_FAILURE;
   float temp_x;
   float temp_y;
@@ -46,31 +46,96 @@ int parseCommand(char *buf, int size){
     memcpy(buf+5, &y_counter, 4);
     break;
   }
+
+  //these lines keep the motion bounded to keep from the pendulum from colliding with the base.
+  if(x_set_point > X_MAX) x_set_point = X_MAX;
+  else if(x_set_point < X_MIN) x_set_point = X_MIN;
+  if(y_set_point > Y_MAX) y_set_point = Y_MAX;
+  else if(y_set_point < Y_MIN) y_set_point = Y_MIN;
+  
   return EXIT_SUCCESS;
 }
 
-void* control_loop(void* ignoreme){
+void* control_loop(void* ignoreme){ //I think this looks good
   while(!is_calibrated){
     usleep(10000); //sleep 10 milliseconds until you get a calibration. Otherwise movement is unsafe.
   }
   
   float err_x;
-  //  float err_y;
+  float err_y;
 
+  //0 means one direction, 1 means the other.
+  int curr_dir_x = 0; //motor can be damaged by rapid direction changes.
+  int curr_dir_y = 0; //at least thats what it said on a website.
+  
   while(1){
+    FILE *file = open(RECORDED_STATE_FILE, "w");
+    fprintf(file, "%d\n%d", x_counter, y_counter);
+    fclose(file); //jank. opening and closing a file really fast sounds like a bad idea.
+    
+    usleep(1000); //sleep for a millisecond to reduce load on the cpu
+    
+    
     err_x = x_set_point - count_to_radians(x_counter);
     if(err_x > SET_POS_THRESHOLD){
-      digitalWrite(PIN_X_H1, LOW);
-      digitalWrite(PIN_X_H2, HIGH);
-      softPwmWrite(PIN_X_PWM, gain(err_x));
+      if(curr_dir_x){
+	curr_dir_x = 0;
+	digitalWrite(PIN_X_H1, LOW);
+	digitalWrite(PIN_X_H2, LOW);
+      }
+      else{
+	digitalWrite(PIN_X_H1, LOW);
+	digitalWrite(PIN_X_H2, HIGH);
+	softPwmWrite(PIN_X_PWM, gain(err_x));
+      }
     }
     else if(err_x < -SET_POS_THRESHOLD){
-      digitalWrite(PIN_X_H1, HIGH);
-      digitalWrite(PIN_X_H2, LOW);
-      softPwmWrite(PIN_X_PWM, gain(err_x));
+      if(!curr_dir_x){
+	curr_dir_x = 1;
+	digitalWrite(PIN_X_H1, LOW);
+	digitalWrite(PIN_X_H2, LOW);
+      }
+      else{
+	digitalWrite(PIN_X_H1, HIGH);
+	digitalWrite(PIN_X_H2, LOW);
+	softPwmWrite(PIN_X_PWM, gain(err_x));
+      }
     }
     else{
       softPwmWrite(PIN_X_PWM, 0);
+      digitalWrite(PIN_X_H1, LOW);
+      digitalWrite(PIN_X_H2, LOW);
+    }
+
+    err_y = y_set_point - count_to_radians(y_counter);
+    if(err_y > SET_POS_THRESHOLD){
+      if(curr_dir_y){
+	curr_dir_y = 0;
+	digitalWrite(PIN_Y_H1, LOW);
+	digitalWrite(PIN_Y_H2, LOW);
+      }
+      else{
+	digitalWrite(PIN_Y_H1, LOW);
+	digitalWrite(PIN_Y_H2, HIGH);
+	softPwmWrite(PIN_Y_PWM, gain(err_y));
+      }
+    }
+    else if(err_y < -SET_POS_THRESHOLD){
+      if(!curr_dir_y){
+	curr_dir_y = 1;
+	digitalWrite(PIN_Y_H1, LOW);
+	digitalWrite(PIN_Y_H2, LOW);
+      }
+      else{
+	digitalWrite(PIN_Y_H1, HIGH);
+	digitalWrite(PIN_Y_H2, LOW);
+	softPwmWrite(PIN_Y_PWM, gain(err_y));
+      }
+    }
+    else{
+      softPwmWrite(PIN_Y_PWM, 0);
+      digitalWrite(PIN_Y_H1, LOW);
+      digitalWrite(PIN_Y_H2, LOW);
     }
   }
 }
@@ -87,7 +152,7 @@ int run_server(){
   
   address.sin_family = AF_INET;
   address.sin_addr.s_addr = INADDR_ANY;
-  address.sin_port = htons(8080);
+  address.sin_port = htons(SERVER_PORT);
 
   bind(sockfd, (struct sockaddr *) &address, sizeof(address));
 
@@ -97,7 +162,7 @@ int run_server(){
     new_socket = accept(sockfd, (struct sockaddr*) &address, (socklen_t*)&addrlen);
     //got connection, now wait for a command to be received
     while(valread = read(new_socket, buf, CMD_LEN)){
-      if(parseCommand(buf, valread)){
+      if(parse_command(buf, valread)){
 	perror("buffer underrun");
 	break;
       }
@@ -124,6 +189,21 @@ void encoder_x_isr(){
   x_counter += lookup_table[x_state & 0b1111];
 }
 
+void encoder_y_isr(){
+  y_state = y_state << 2;
+  if(digitalRead(PIN_Y_QUAD_L))
+    y_state |= 0b0001; //set high
+  else
+    y_state &= 0b1110;
+
+  if(digitalRead(PIN_Y_QUAD_R))
+    y_state |= 0b0010; //set high
+  else
+    y_state &= 0b1101; //set low
+    
+  y_counter += lookup_table[y_state & 0b1111];
+}
+
 void test(){
   digitalWrite(PIN_X_H1, HIGH);
   digitalWrite(PIN_X_H2, LOW);
@@ -133,6 +213,12 @@ void test(){
     usleep(100000);
     printf("Encoder count %d\n", x_counter);
   }
+}
+
+void get_recorded_state(){
+  FILE* file = fopen(RECORDED_STATE_FILE, "r");
+  fscanf(file, "%d %d", x_counter, y_counter);
+  fclose(file);
 }
 
 int run_control_loop(){
@@ -146,31 +232,30 @@ int run_control_loop(){
   pinMode(PIN_X_H1, OUTPUT);
   pinMode(PIN_X_H2, OUTPUT);
 
-  /*  pinMode(PIN_Y_QUAD_L, INPUT);
+  pinMode(PIN_Y_QUAD_L, INPUT);
   pinMode(PIN_Y_QUAD_R, INPUT);
   pullUpDnControl(PIN_Y_QUAD_L, PUD_DOWN);
   pullUpDnControl(PIN_Y_QUAD_R, PUD_DOWN);
   pinMode(PIN_Y_H1, OUTPUT);
-  pinMode(PIN_Y_H2, OUTPUT);*/
+  pinMode(PIN_Y_H2, OUTPUT);
   
   
   wiringPiISR(PIN_X_QUAD_L, INT_EDGE_BOTH, encoder_x_isr);
   wiringPiISR(PIN_X_QUAD_R, INT_EDGE_BOTH, encoder_x_isr);
-  //wiringPiISR(PIN_Y_QUAD_L, INT_EDGE_BOTH, encoder_y_isr);
-  //wiringPiISR(PIN_Y_QUAD_R, INT_EDGE_BOTH, encoder_y_isr);
+  
+  wiringPiISR(PIN_Y_QUAD_L, INT_EDGE_BOTH, encoder_y_isr);
+  wiringPiISR(PIN_Y_QUAD_R, INT_EDGE_BOTH, encoder_y_isr);
 
   softPwmCreate(PIN_X_PWM, 0, 100);
+  softPwmCreate(PIN_Y_PWM, 0, 100);
 
   x_set_point = count_to_radians(10000); //try to make it do a half rotation
-  is_calibrated = 1;
+  //is_calibrated = 1;
+  
+  get_recorded_state();
+  
   pthread_t motor_thread;
   pthread_create(&motor_thread, NULL, &control_loop, NULL);
-
-  while(1){
-    usleep(100000);
-    float err_x = x_set_point - count_to_radians(x_counter);
-    printf("err_x %f counts %d\n", err_x, x_counter);
-  }
 }
 
 int main(int argc, char *argv[]){
@@ -178,5 +263,5 @@ int main(int argc, char *argv[]){
   //pthread_create(&socket_thread, NULL, &socket_handler, NULL);
   
   run_control_loop();
-  //run_server();
+  run_server();
 }
