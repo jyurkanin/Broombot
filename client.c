@@ -1,5 +1,22 @@
 #include "client.h"
 
+void move_rel_cmd(char buf[9], float x, float y){
+    buf[0] = MOVE_REL_CMD;
+    memcpy(buf+1, &x, sizeof(x)); //sizeof float is 4.
+    memcpy(buf+5, &y, sizeof(y)); 
+}
+
+void move_abs_cmd(char buf[9], float x, float y){
+    buf[0] = MOVE_ABS_CMD;
+    memcpy(buf+1, &x, sizeof(x)); //sizeof float is 4.
+    memcpy(buf+5, &y, sizeof(y)); 
+}
+
+void calibrate_cmd(char buf[9], float x, float y){
+    buf[0] = CALIBRATE_CMD;
+    memcpy(buf+1, &x, sizeof(x)); //sizeof float is 4.
+    memcpy(buf+5, &y, sizeof(y)); 
+}
 
 int main(int argc, char *argv[]){
   if(argc < 5){

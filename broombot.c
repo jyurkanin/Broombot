@@ -47,12 +47,12 @@ int parse_command(char *buf, int size){
     printf("Got REL CMD\n");
     break;
   case CALIBRATE_CMD:
-    memcpy(buf+1, &temp_x, 4);
-    memcpy(buf+5, &temp_y, 4);
+    memcpy(&temp_x, buf+1, 4);
+    memcpy(&temp_y, buf+5, 4);
     dx = temp_x - count_to_radians(x_counter);
     dy = temp_y - count_to_radians(y_counter);
-    x_counter = round(temp_x*10000 / (2*M_PI));
-    y_counter = round(temp_y*10000 / (2*M_PI));
+    x_counter = round(temp_x*10000 / (2.0*M_PI));
+    y_counter = round(temp_y*10000 / (2.0*M_PI));
     x_set_point += dx;
     y_set_point += dy;
     printf("Got calibrate CMD\n");
@@ -175,7 +175,6 @@ int run_server(){
   while(1){
     listen(sockfd, 3);
     new_socket = accept(sockfd, (struct sockaddr*) &address, (socklen_t*)&addrlen);
-    printf("Got new connection\n");
     //got connection, now wait for a command to be received
     while(valread = read(new_socket, buf, CMD_LEN)){
       if(parse_command(buf, valread)){

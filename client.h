@@ -12,3 +12,9 @@
 #define MOVE_ABS_CMD 2 //next two bytes are assigned to the current angular set point
 #define CALIBRATE_CMD 3    //Assigns the current position to whatever. Most useful to set it to zero.
 
+//typedef char[9] CMD;
+
+void move_rel_cmd(char buf[9], float x, float y);
+void move_abs_cmd(char buf[9], float x, float y);
+void calibrate_cmd(char buf[9], float x, float y);
+
