@@ -51,8 +51,8 @@ int parse_command(char *buf, int size){
     memcpy(buf+5, &temp_y, 4);
     dx = temp_x - count_to_radians(x_counter);
     dy = temp_y - count_to_radians(y_counter);
-    x_counter = temp_x*10000 / (2*M_PI);
-    y_counter = temp_y*10000 / (2*M_PI);
+    x_counter = round(temp_x*10000 / (2*M_PI));
+    y_counter = round(temp_y*10000 / (2*M_PI));
     x_set_point += dx;
     y_set_point += dy;
     printf("Got calibrate CMD\n");

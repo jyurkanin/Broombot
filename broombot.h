@@ -30,10 +30,10 @@
 #define PIN_Y_QUAD_L 17
 #define PIN_Y_QUAD_R 27
 
-#define X_MIN -M_PI //TODO: These are guesses, figure out the actual values.
-#define X_MAX M_PI  //
-#define Y_MIN -M_PI
-#define Y_MAX M_PI
+#define X_MIN -M_PI/2
+#define X_MAX M_PI/2
+#define Y_MIN -M_PI/3
+#define Y_MAX M_PI/3
 
 //CMD type
 #define MOVE_REL_CMD 1 //next two bytes are added to the current angular set point
